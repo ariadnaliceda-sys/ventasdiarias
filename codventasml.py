@@ -2,38 +2,71 @@ import streamlit as st
 import pandas as pd
 import io
 
-st.title("Conversor de Reportes Mercado Libre")
+st.set_page_config(page_title="Conversor de Ventas ML", layout="wide")
+st.title("🚀 Conversor de Reportes Mercado Libre")
 
 uploaded_file = st.file_uploader("Subí tu reporte de ventas (Excel)", type=['xlsx'])
 
 if uploaded_file:
-    # 1. Cargamos el Excel completo sin saltar filas primero
-    df_crudo = pd.read_excel(uploaded_file)
-    
-    # 2. Buscamos automáticamente la fila donde está "# de venta"
-    # Esto evita que el error de 'skiprows' nos rompa el programa
+    # 1. Buscamos dónde empieza la tabla
+    df_temp = pd.read_excel(uploaded_file)
     start_row = 0
-    for i, row in df_crudo.iterrows():
+    for i, row in df_temp.iterrows():
         if "# de venta" in row.values:
-            start_row = i + 1 # Encontramos la fila de encabezados
+            start_row = i + 1
             break
             
-    # 3. Volvemos a leer pero desde donde encontramos los datos reales
+    # 2. Leemos la tabla real
     df_ml = pd.read_excel(uploaded_file, skiprows=start_row)
-    
-    # Limpiamos nombres de columnas por las dudas (borra espacios locos)
     df_ml.columns = [str(c).strip() for c in df_ml.columns]
 
-    # Verificamos si ahora sí existe la columna
     if '# de venta' in df_ml.columns:
-        filas_finales = []
-        # ... acá sigue el resto de tu lógica de cálculo ...
-        st.success("¡Columna encontrada!")
+        st.success("¡Columna encontrada! Procesando datos...")
         
-        # (Aquí va el resto del código que ya tenías para procesar)
+        filas_finales = []
+
         for _, row in df_ml.iterrows():
-            if pd.isna(row['# de venta']): continue
-            # ... tus cálculos ...
+            # Si el ID de venta está vacío, saltamos la fila
+            if pd.isna(row['# de venta']):
+                continue
+
+            id_vta = row['# de venta']
+            precio = float(row.get('Ingresos por productos (ARS)', 0))
+            comision = abs(float(row.get('Cargo por venta', 0)))
+            costo_fijo = abs(float(row.get('Costo fijo', 0)))
+            cuotas = abs(float(row.get('Costo por ofrecer cuotas', 0)))
+            envio = abs(float(row.get('Costos de envío (ARS)', 0)))
             
+            # Calculamos el NETO (lo que te queda a vos)
+            monto_neto = precio - (comision + costo_fijo + cuotas + envio)
+            
+            # --- Formato igual a tu Imagen 2 ---
+            # Fila 1: Producto (Neto)
+            filas_finales.append({"Categoría": "Moda", "ID Operación": id_vta, "Monto": monto_neto})
+            # Fila 2: Comisiones
+            filas_finales.append({"Categoría": "Comisiones MP", "ID Operación": "", "Monto": comision + costo_fijo + cuotas})
+            # Fila 3: Envío
+            filas_finales.append({"Categoría": "Costo Envío", "ID Operación": "", "Monto": envio})
+            # Fila separadora (opcional)
+            filas_finales.append({"Categoría": "---", "ID Operación": "", "Monto": ""})
+
+        # 3. Creamos el DataFrame final para mostrar
+        df_final = pd.DataFrame(filas_finales)
+        
+        # Mostramos una tabla linda en Streamlit
+        st.subheader("Vista Previa del Excel de Gestión")
+        st.dataframe(df_final, use_container_width=True)
+
+        # 4. Botón de Descarga
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_final.to_excel(writer, index=False, sheet_name='Gestión')
+        
+        st.download_button(
+            label="📥 Descargar Excel para mi jefe",
+            data=output.getvalue(),
+            file_name="reporte_procesado.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
     else:
-        st.error(f"No encontré la columna '# de venta'. Las columnas detectadas son: {list(df_ml.columns)}")
+        st.error("No se encontró la columna '# de venta'. Revisá el formato del Excel.")

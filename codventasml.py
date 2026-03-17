@@ -25,17 +25,30 @@ if uploaded_file:
         
         filas_finales = []
 
-        for _, row in df_ml.iterrows():
-            # Si el ID de venta está vacío, saltamos la fila
+       for _, row in df_ml.iterrows():
             if pd.isna(row['# de venta']):
                 continue
 
             id_vta = row['# de venta']
-            precio = float(row.get('Ingresos por productos (ARS)', 0))
-            comision = abs(float(row.get('Cargo por venta', 0)))
-            costo_fijo = abs(float(row.get('Costo fijo', 0)))
-            cuotas = abs(float(row.get('Costo por ofrecer cuotas', 0)))
-            envio = abs(float(row.get('Costos de envío (ARS)', 0)))
+            
+            # Usamos fillna(0) para que si no hay dato, valga 0 y no tire "None"
+            precio = float(pd.to_numeric(row.get('Ingresos por productos (ARS)', 0), errors='coerce'))
+            comision = abs(float(pd.to_numeric(row.get('Cargo por venta', 0), errors='coerce')))
+            costo_fijo = abs(float(pd.to_numeric(row.get('Costo fijo', 0), errors='coerce')))
+            cuotas = abs(float(pd.to_numeric(row.get('Costo por ofrecer cuotas', 0), errors='coerce')))
+            envio = abs(float(pd.to_numeric(row.get('Costos de envío (ARS)', 0), errors='coerce')))
+            
+            # Si el envío está vacío en el reporte (celda blanca), lo ponemos en 0
+            if pd.isna(envio): envio = 0
+
+            # Cálculo del NETO
+            monto_neto = precio - (comision + costo_fijo + cuotas + envio)
+            
+            # --- Formato exacto Imagen 2 ---
+            filas_finales.append({"Categoría": "Moda", "ID Operación": id_vta, "Monto": monto_neto})
+            filas_finales.append({"Categoría": "Comisiones MP", "ID Operación": "", "Monto": comision + costo_fijo + cuotas})
+            filas_finales.append({"Categoría": "Costo Envío", "ID Operación": "", "Monto": envio})
+            # Quitamos la fila de "---" para que sea más fácil de copiar/pegar al Excel real
             
             # Calculamos el NETO (lo que te queda a vos)
             monto_neto = precio - (comision + costo_fijo + cuotas + envio)

@@ -105,4 +105,13 @@ if uploaded_file:
                 df_final.to_excel(writer, index=False, sheet_name='Gestión_Ventas')
             
             st.download_button(
-                label="📥
+                label="📥 Descargar Excel de Gestión",
+                data=output.getvalue(),
+                file_name="gestion_ventas_ml.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.error("No encontré la columna '# de venta'.")
+
+    except Exception as e:
+        st.error(f"Error al procesar el archivo: {e}")

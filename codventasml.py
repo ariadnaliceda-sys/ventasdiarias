@@ -42,6 +42,7 @@ if uploaded_file:
                 # BUSCAMOS EL NOMBRE CON TU ENCABEZADO ESPECÍFICO
                 nombre_cliente = row.get('Datos personales o de empresa', 'S/D')
                 dni_cliente = row.get('Tipo y número de documento', 'S/D')
+                total neto = row.get('Total (ARS)', 'S/D')
                 
                 # VALORES MONETARIOS
                 precio = limpiar_monto(row.get('Ingresos por productos (ARS)', 0))

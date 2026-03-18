@@ -86,15 +86,18 @@ if uploaded_file:
             # 3. CREAR DATAFRAME FINAL
             df_final = pd.DataFrame(filas_finales)
 
-            # 4. VISTA PREVIA
+            # 4. VISTA PREVIA (Corregida para las nuevas columnas)
             st.subheader("Vista Previa del Excel de Gestión")
             df_display = df_final.copy()
-            df_display['Monto'] = df_display['Monto'].apply(
-                lambda x: f"$ {x:,.2f}" if pd.notna(x) and x != "" else ""
-            )
+            
+            # Aplicamos el formato moneda a las 4 columnas de dinero
+            cols_dinero = ["Monto bruto", "Comisiones", "Impuestos", "Monto neto"]
+            for col in cols_dinero:
+                df_display[col] = df_display[col].apply(lambda x: f"$ {x:,.2f}" if pd.notna(x) else "$ 0.00")
+            
             st.dataframe(df_display, use_container_width=True)
 
-            # 5. BOTÓN DE DESCARGA (CIERRE CORRECTO DEL BLOQUE WITH)
+            # 5. BOTÓN DE DESCARGA
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_final.to_excel(writer, index=False, sheet_name='Gestión')

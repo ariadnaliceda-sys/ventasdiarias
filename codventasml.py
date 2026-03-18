@@ -42,7 +42,6 @@ if uploaded_file:
                 # BUSCAMOS EL NOMBRE CON TU ENCABEZADO ESPECÍFICO
                 nombre_cliente = row.get('Datos personales o de empresa', 'S/D')
                 dni_cliente = row.get('Tipo y número de documento', 'S/D')
-                total neto = row.get('Total (ARS)', 'S/D')
                 
                 # VALORES MONETARIOS
                 precio = limpiar_monto(row.get('Ingresos por productos (ARS)', 0))
@@ -50,9 +49,11 @@ if uploaded_file:
                 costo_fijo = limpiar_monto(row.get('Costo fijo', 0))
                 cuotas = limpiar_monto(row.get('Costo por ofrecer cuotas', 0))
                 envio = limpiar_monto(row.get('Costos de envío (ARS)', 0))
+                impuestos = limpiar_monto(row.get('Impuestos', 0))
+                monto_bruto = limpiar_monto(row.get('Ingresos por productos (ARS)', 0))
                 
                 # LÓGICA SOLICITADA: Sumamos comisiones + envío en una sola fila
-                comision_unificada = cargo_vta + costo_fijo + cuotas + envio
+                comision_unificada = cargo_vta + costo_fijo + envio
                 
                 # Monto Neto (Lo que queda para el producto)
                 monto_neto = precio - comision_unificada
@@ -64,7 +65,11 @@ if uploaded_file:
                     "ID Operación": id_vta, 
                     "Cliente": nombre_cliente,
                     "DNI/CUIT": dni_cliente,
-                    "Monto": monto_neto
+                    "Monto neto": monto_neto,
+                    "Monto bruto": monto_bruto,
+                    "Comisiones": comision_unificada 
+                    
+            
                 })
                 
                 # Fila 2: Comisiones MP + Envío (Todo sumado)

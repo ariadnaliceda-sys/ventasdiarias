@@ -97,4 +97,11 @@ if uploaded_file:
             st.download_button(
                 label="📥 Descargar Excel de Gestión Final",
                 data=output.getvalue(),
-                file
+                file_name="gestion_ventas_ml.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.error("No se encontró la columna '# de venta'.")
+
+    except Exception as e:
+        st.error(f"Error al procesar el archivo: {e}")

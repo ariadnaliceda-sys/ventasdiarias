@@ -65,8 +65,9 @@ if uploaded_file:
                     "Cliente": nombre_cliente,
                     "DNI/CUIT": dni_cliente,
                     "Monto neto": monto_neto,
-                    "Monto bruto": monto_bruto,
-                    "Comisiones": comision_unificada 
+                    "Impuestos": impuestos,
+                    "Comisiones": comision_unificada,
+                    "Monto bruto": monto_bruto
                     
             
                 })
@@ -76,8 +77,7 @@ if uploaded_file:
                     "Categoría/Producto": "", 
                     "ID Operación": "", 
                     "Cliente": "",
-                    "DNI/CUIT": "",
-                    "Monto": "",
+                    "DNI/CUIT": ""
                 })
                 
                 # Fila separadora vacía

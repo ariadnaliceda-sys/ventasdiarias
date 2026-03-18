@@ -10,7 +10,7 @@ uploaded_file = st.file_uploader("Subí el archivo .xlsx de Mercado Libre", type
 
 if uploaded_file:
     try:
-        # 1. BUSCAR LA TABLA REAL (Donde están los encabezados amarillos)
+        # 1. BUSCAR LA TABLA REAL AUTOMÁTICAMENTE
         df_temp = pd.read_excel(uploaded_file)
         start_row = 0
         for i, row in df_temp.iterrows():
@@ -23,15 +23,15 @@ if uploaded_file:
         df_ml.columns = [str(c).strip() for c in df_ml.columns]
 
         if '# de venta' in df_ml.columns:
-            st.success("¡Tabla detectada! Procesando información...")
+            st.success("¡Tabla detectada! Procesando ventas...")
             
             filas_finales = []
 
             def limpiar_monto(valor):
                 n = pd.to_numeric(valor, errors='coerce')
+                # Usamos abs() porque ML pone los cargos en negativo
                 return abs(float(n)) if pd.notna(n) else 0.0
 
-            # BUCLE FOR: Todo lo que está debajo lleva 4 o 8 espacios de sangría
             for _, row in df_ml.iterrows():
                 if pd.isna(row['# de venta']):
                     continue
@@ -42,20 +42,23 @@ if uploaded_file:
                 nombre_cliente = row.get('Nombre del comprador', 'S/D')
                 dni_cliente = row.get('Documento del comprador', 'S/D')
                 
-                # VALORES MONETARIOS
+                # VALORES MONETARIOS (Basados en las columnas de tu imagen)
                 precio = limpiar_monto(row.get('Ingresos por productos (ARS)', 0))
-                comision = limpiar_monto(row.get('Cargo por venta', 0))
+                cargo_vta = limpiar_monto(row.get('Cargo por venta', 0))
                 costo_fijo = limpiar_monto(row.get('Costo fijo', 0))
                 cuotas = limpiar_monto(row.get('Costo por ofrecer cuotas', 0))
                 envio = limpiar_monto(row.get('Costos de envío (ARS)', 0))
-                impuestos = limpiar_monto(row.get('Impuestos', 0))
                 
-                # Cálculo del Neto
-                monto_neto = precio - (comision + costo_fijo + cuotas + envio + impuestos)
+                # Sumamos todas las comisiones en una sola variable
+                total_comisiones = cargo_vta + costo_fijo + cuotas
+                
+                # Cálculo del Neto (Lo que te queda a vos)
+                # Restamos comisiones y envío del precio total
+                monto_neto = precio - (total_comisiones + envio)
                 
                 # --- ESTRUCTURA PARA TU EXCEL DE GESTIÓN ---
                 
-                # Fila 1: El título de la publicación reemplaza a "Moda"
+                # Fila 1: Título de la publicación + Datos del cliente
                 filas_finales.append({
                     "Categoría/Producto": titulo_pub, 
                     "ID Operación": id_vta, 
@@ -64,26 +67,16 @@ if uploaded_file:
                     "Monto": monto_neto
                 })
                 
-                # Fila 2: Comisiones
+                # Fila 2: Comisiones (Cargo vta + Fijo + Cuotas)
                 filas_finales.append({
                     "Categoría/Producto": "Comisiones MP", 
                     "ID Operación": "", 
                     "Cliente": "",
                     "DNI/CUIT": "",
-                    "Monto": comision + costo_fijo + cuotas
+                    "Monto": total_comisiones
                 })
                 
-                # Fila 3: Impuestos (si existen)
-                if impuestos > 0:
-                    filas_finales.append({
-                        "Categoría/Producto": "Impuestos/Retenciones", 
-                        "ID Operación": "", 
-                        "Cliente": "",
-                        "DNI/CUIT": "",
-                        "Monto": impuestos
-                    })
-                
-                # Fila 4: Envío
+                # Fila 3: Envío (Aparte, como en tu imagen original)
                 filas_finales.append({
                     "Categoría/Producto": "Costo Envío", 
                     "ID Operación": "", 
@@ -112,13 +105,4 @@ if uploaded_file:
                 df_final.to_excel(writer, index=False, sheet_name='Gestión_Ventas')
             
             st.download_button(
-                label="📥 Descargar Excel con Títulos",
-                data=output.getvalue(),
-                file_name="reporte_ventas_titulos.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.error("No se encontró la columna '# de venta'.")
-
-    except Exception as e:
-        st.error(f"Error al procesar el archivo: {e}")
+                label="📥

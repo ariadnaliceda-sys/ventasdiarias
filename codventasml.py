@@ -42,11 +42,22 @@ if uploaded_file:
                     n = pd.to_numeric(valor, errors='coerce')
                     return abs(float(n)) if pd.notna(n) else 0.0
 
+                for _, row in df_ml.iterrows():
+                if pd.isna(row['# de venta']): continue
+
+                # DATOS DE IDENTIFICACIÓN Y TÍTULO
+                id_vta = row['# de venta']
+                titulo_pub = row.get('Título de la publicación', 'Sin Título') # <-- AQUÍ CAMBIA "MODA" POR EL TÍTULO
+                nombre_cliente = row.get('Nombre del comprador', 'S/D')
+                dni_cliente = row.get('Documento del comprador', 'S/D')
+
+                # VALORES MONETARIOS
                 precio = limpiar_monto(row.get('Ingresos por productos (ARS)', 0))
                 comision = limpiar_monto(row.get('Cargo por venta', 0))
                 costo_fijo = limpiar_monto(row.get('Costo fijo', 0))
                 cuotas = limpiar_monto(row.get('Costo por ofrecer cuotas', 0))
                 envio = limpiar_monto(row.get('Costos de envío (ARS)', 0))
+                impuestos = limpiar_monto(row.get('Impuestos', 0))
                 
                 # Los impuestos se pueden sumar aquí si existen en tu reporte
                 # Por ahora calculamos el Neto (lo que te queda a vos)
@@ -54,26 +65,50 @@ if uploaded_file:
                 
                 # --- ESTRUCTURA PARA TU EXCEL DE GESTIÓN ---
                 
-                # Fila 1: Venta neta
-                filas_finales.append({"Categoría": "Moda", "ID Operación": id_vta, "Monto": monto_neto})
+                filas_finales.append({
+                    "Categoría/Producto": titulo_pub, 
+                    "ID Operación": id_vta, 
+                    "Cliente": nombre_cliente,
+                    "DNI/CUIT": dni_cliente,
+                    "Monto": monto_neto
+                })
                 
-                # Fila 2: Todas las comisiones sumadas
-                total_comisiones = comision + costo_fijo + cuotas
-                filas_finales.append({"Categoría": "Comisiones MP", "ID Operación": "", "Monto": total_comisiones})
+                # Fila 2: Comisiones
+                filas_finales.append({
+                    "Categoría/Producto": "Comisiones MP", 
+                    "ID Operación": "", 
+                    "Cliente": "",
+                    "DNI/CUIT": "",
+                    "Monto": comision + costo_fijo + cuotas
+                })
                 
-                # Fila 3: Envío
-                filas_finales.append({"Categoría": "Costo Envío", "ID Operación": "", "Monto": envio})
+                # Fila 3: Impuestos (si existen)
+                if impuestos > 0:
+                    filas_finales.append({
+                        "Categoría/Producto": "Impuestos/Retenciones", 
+                        "ID Operación": "", 
+                        "Cliente": "",
+                        "DNI/CUIT": "",
+                        "Monto": impuestos
+                    })
                 
-                # Fila vacía para separar de la siguiente venta
-                filas_finales.append({"Categoría": "", "ID Operación": "", "Monto": None})
+                # Fila 4: Envío
+                filas_finales.append({
+                    "Categoría/Producto": "Costo Envío", 
+                    "ID Operación": "", 
+                    "Cliente": "",
+                    "DNI/CUIT": "",
+                    "Monto": envio
+                })
+                
+                # Fila separadora
+                filas_finales.append({"Categoría/Producto": "", "ID Operación": "", "Cliente": "", "DNI/CUIT": "", "Monto": None})
 
             # 3. CREAR DATAFRAME FINAL
             df_final = pd.DataFrame(filas_finales)
 
-            # 4. VISTA PREVIA LINDA EN STREAMLIT
+            # 4. VISTA PREVIA
             st.subheader("Vista Previa del Excel de Gestión")
-            
-            # Creamos una copia solo para mostrar con signo $ sin arruinar los números del Excel
             df_display = df_final.copy()
             df_display['Monto'] = df_display['Monto'].apply(
                 lambda x: f"$ {x:,.2f}" if pd.notna(x) and x != "" else ""
@@ -83,16 +118,19 @@ if uploaded_file:
             # 5. BOTÓN DE DESCARGA
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df_final.to_excel(writer, index=False, sheet_name='Gestión')
+                df_final.to_excel(writer, index=False, sheet_name='Gestión_Ventas')
             
             st.download_button(
-                label="📥 Descargar Excel para mi jefe",
+                label="📥 Descargar Excel con Títulos",
                 data=output.getvalue(),
-                file_name="reporte_procesado.xlsx",
+                file_name="reporte_ventas_titulos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         else:
-            st.error("No encontré la columna '# de venta'. Verificá que el archivo sea el correcto.")
+            st.error("No se encontró la columna '# de venta'.")
+
+    except Exception as e:
+        st.error(f"Error al procesar el archivo: {e}")
 
     except Exception as e:
         st.error(f"Ocurrió un error inesperado: {e}")

@@ -81,7 +81,7 @@ if uploaded_file:
                 })
                 
                 # Fila separadora vacía
-                filas_finales.append({"Categoría/Producto": "", "ID Operación": "", "Cliente": "", "DNI/CUIT": "", "Monto": None})
+                filas_finales.append({"Categoría/Producto": "", "ID Operación": "", "Cliente": "", "DNI/CUIT": ""})
 
             # 3. CREAR DATAFRAME FINAL
             df_final = pd.DataFrame(filas_finales)

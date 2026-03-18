@@ -77,7 +77,7 @@ if uploaded_file:
                     "ID Operación": "", 
                     "Cliente": "",
                     "DNI/CUIT": "",
-                    "Monto": comision_unificada
+                    "Monto": "",
                 })
                 
                 # Fila separadora vacía

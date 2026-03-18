@@ -51,12 +51,11 @@ if uploaded_file:
                 envio = limpiar_monto(row.get('Costos de envío (ARS)', 0))
                 impuestos = limpiar_monto(row.get('Impuestos', 0))
                 monto_bruto = limpiar_monto(row.get('Ingresos por productos (ARS)', 0))
+                monto_neto = limpiar_monto(row.get('Total (ARS)', 0))
                 
                 # LÓGICA SOLICITADA: Sumamos comisiones + envío en una sola fila
-                comision_unificada = cargo_vta + costo_fijo + envio
+                comision_unificada = cargo_vta + cuotas + envio
                 
-                # Monto Neto (Lo que queda para el producto)
-                monto_neto = precio - comision_unificada
                 
                 # --- ESTRUCTURA FINAL PARA EL EXCEL ---
                 # Fila 1: Producto + Datos del Cliente

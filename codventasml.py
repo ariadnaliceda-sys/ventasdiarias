@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 
+# Configuración de la página
 st.set_page_config(page_title="Conversor de Ventas ML", layout="wide")
 st.title("🚀 Conversor de Reportes Mercado Libre")
 
@@ -9,6 +10,7 @@ uploaded_file = st.file_uploader("Subí el archivo .xlsx de Mercado Libre", type
 
 if uploaded_file:
     try:
+        # 1. BUSCAR LA TABLA REAL AUTOMÁTICAMENTE
         df_temp = pd.read_excel(uploaded_file)
         start_row = 0
         for i, row in df_temp.iterrows():
@@ -16,11 +18,12 @@ if uploaded_file:
                 start_row = i + 1
                 break
         
+        # 2. LEER LA TABLA DESDE LA FILA DETECTADA
         df_ml = pd.read_excel(uploaded_file, skiprows=start_row)
         df_ml.columns = [str(c).strip() for c in df_ml.columns]
 
         if '# de venta' in df_ml.columns:
-            st.success("¡Tabla detectada! Ajustando comisiones y nombres...")
+            st.success("¡Tabla detectada! Procesando comisiones unificadas y nombres...")
             
             filas_finales = []
 
@@ -29,13 +32,14 @@ if uploaded_file:
                 return abs(float(n)) if pd.notna(n) else 0.0
 
             for _, row in df_ml.iterrows():
-                if pd.isna(row['# de venta']): continue
+                if pd.isna(row['# de venta']): 
+                    continue
 
                 # DATOS DE IDENTIFICACIÓN
                 id_vta = row['# de venta']
                 titulo_pub = row.get('Título de la publicación', 'Sin Título')
                 
-                # BUSCAMOS EL NOMBRE CON EL ENCABEZADO QUE MENCIONASTE
+                # BUSCAMOS EL NOMBRE CON TU ENCABEZADO ESPECÍFICO
                 nombre_cliente = row.get('Datos personales o de empresa', 'S/D')
                 dni_cliente = row.get('Documento del comprador', 'S/D')
                 
@@ -46,14 +50,14 @@ if uploaded_file:
                 cuotas = limpiar_monto(row.get('Costo por ofrecer cuotas', 0))
                 envio = limpiar_monto(row.get('Costos de envío (ARS)', 0))
                 
-                # NUEVA LÓGICA: Sumamos cargo total + envío en una sola categoría
-                comision_total = cargo_vta + costo_fijo + cuotas + envio
+                # LÓGICA SOLICITADA: Sumamos comisiones + envío en una sola fila
+                comision_unificada = cargo_vta + costo_fijo + cuotas + envio
                 
-                # Monto Neto
-                monto_neto = precio - comision_total
+                # Monto Neto (Lo que queda para el producto)
+                monto_neto = precio - comision_unificada
                 
-                # --- ESTRUCTURA FINAL ---
-                # Fila 1: Producto + Cliente
+                # --- ESTRUCTURA FINAL PARA EL EXCEL ---
+                # Fila 1: Producto + Datos del Cliente
                 filas_finales.append({
                     "Categoría/Producto": titulo_pub, 
                     "ID Operación": id_vta, 
@@ -62,20 +66,22 @@ if uploaded_file:
                     "Monto": monto_neto
                 })
                 
-                # Fila 2: Comisiones MP (Incluye el envío sumado)
+                # Fila 2: Comisiones MP + Envío (Todo sumado)
                 filas_finales.append({
                     "Categoría/Producto": "Comisiones MP + Envío", 
                     "ID Operación": "", 
                     "Cliente": "",
                     "DNI/CUIT": "",
-                    "Monto": comision_total
+                    "Monto": comision_unificada
                 })
                 
-                # Fila separadora
+                # Fila separadora vacía
                 filas_finales.append({"Categoría/Producto": "", "ID Operación": "", "Cliente": "", "DNI/CUIT": "", "Monto": None})
 
+            # 3. CREAR DATAFRAME FINAL
             df_final = pd.DataFrame(filas_finales)
 
+            # 4. VISTA PREVIA
             st.subheader("Vista Previa del Excel de Gestión")
             df_display = df_final.copy()
             df_display['Monto'] = df_display['Monto'].apply(
@@ -83,5 +89,12 @@ if uploaded_file:
             )
             st.dataframe(df_display, use_container_width=True)
 
+            # 5. BOTÓN DE DESCARGA (CIERRE CORRECTO DEL BLOQUE WITH)
             output = io.BytesIO()
-            with
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_final.to_excel(writer, index=False, sheet_name='Gestión')
+            
+            st.download_button(
+                label="📥 Descargar Excel de Gestión Final",
+                data=output.getvalue(),
+                file

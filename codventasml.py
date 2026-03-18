@@ -4,7 +4,7 @@ import io
 
 # Configuración de la página
 st.set_page_config(page_title="Conversor de Ventas ML", layout="wide")
-st.title("🚀 Conversor de Reportes Mercado Libre")
+st.title("Conversor de Reportes Mercado Libre")
 
 uploaded_file = st.file_uploader("Subí el archivo .xlsx de Mercado Libre", type=['xlsx'])
 

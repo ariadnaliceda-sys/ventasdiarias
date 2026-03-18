@@ -5,14 +5,12 @@ import io
 # Configuración de la página
 st.set_page_config(page_title="Conversor de Ventas ML", layout="wide")
 st.title("🚀 Conversor de Reportes Mercado Libre")
-st.markdown("Subí el Excel que bajás de Mercado Libre para transformarlo al formato de gestión.")
 
-uploaded_file = st.file_uploader("Seleccioná el archivo .xlsx", type=['xlsx'])
+uploaded_file = st.file_uploader("Subí el archivo .xlsx de Mercado Libre", type=['xlsx'])
 
 if uploaded_file:
     try:
-        # 1. ENCONTRAR LA TABLA AUTOMÁTICAMENTE
-        # Leemos el Excel sin saltar filas para buscar los encabezados
+        # 1. BUSCAR LA TABLA REAL (Donde están los encabezados amarillos)
         df_temp = pd.read_excel(uploaded_file)
         start_row = 0
         for i, row in df_temp.iterrows():
@@ -20,37 +18,30 @@ if uploaded_file:
                 start_row = i + 1
                 break
         
-        # 2. LEER LA TABLA REAL
+        # 2. LEER LA TABLA DESDE LA FILA DETECTADA
         df_ml = pd.read_excel(uploaded_file, skiprows=start_row)
-        # Limpiamos espacios en los nombres de las columnas
         df_ml.columns = [str(c).strip() for c in df_ml.columns]
 
         if '# de venta' in df_ml.columns:
-            st.success("¡Tabla detectada correctamente!")
+            st.success("¡Tabla detectada! Procesando información...")
             
             filas_finales = []
 
+            def limpiar_monto(valor):
+                n = pd.to_numeric(valor, errors='coerce')
+                return abs(float(n)) if pd.notna(n) else 0.0
+
+            # BUCLE FOR: Todo lo que está debajo lleva 4 o 8 espacios de sangría
             for _, row in df_ml.iterrows():
-                # Si no hay número de venta, saltamos la fila
                 if pd.isna(row['# de venta']):
                     continue
 
+                # DATOS DE IDENTIFICACIÓN
                 id_vta = row['# de venta']
-                
-                # Convertimos todo a número. Si hay error o está vacío, ponemos 0.
-                def limpiar_monto(valor):
-                    n = pd.to_numeric(valor, errors='coerce')
-                    return abs(float(n)) if pd.notna(n) else 0.0
-
-                for _, row in df_ml.iterrows():
-                if pd.isna(row['# de venta']): continue
-
-                # DATOS DE IDENTIFICACIÓN Y TÍTULO
-                id_vta = row['# de venta']
-                titulo_pub = row.get('Título de la publicación', 'Sin Título') # <-- AQUÍ CAMBIA "MODA" POR EL TÍTULO
+                titulo_pub = row.get('Título de la publicación', 'Sin Título')
                 nombre_cliente = row.get('Nombre del comprador', 'S/D')
                 dni_cliente = row.get('Documento del comprador', 'S/D')
-
+                
                 # VALORES MONETARIOS
                 precio = limpiar_monto(row.get('Ingresos por productos (ARS)', 0))
                 comision = limpiar_monto(row.get('Cargo por venta', 0))
@@ -59,12 +50,12 @@ if uploaded_file:
                 envio = limpiar_monto(row.get('Costos de envío (ARS)', 0))
                 impuestos = limpiar_monto(row.get('Impuestos', 0))
                 
-                # Los impuestos se pueden sumar aquí si existen en tu reporte
-                # Por ahora calculamos el Neto (lo que te queda a vos)
-                monto_neto = precio - (comision + costo_fijo + cuotas + envio)
+                # Cálculo del Neto
+                monto_neto = precio - (comision + costo_fijo + cuotas + envio + impuestos)
                 
                 # --- ESTRUCTURA PARA TU EXCEL DE GESTIÓN ---
                 
+                # Fila 1: El título de la publicación reemplaza a "Moda"
                 filas_finales.append({
                     "Categoría/Producto": titulo_pub, 
                     "ID Operación": id_vta, 
@@ -101,7 +92,7 @@ if uploaded_file:
                     "Monto": envio
                 })
                 
-                # Fila separadora
+                # Fila separadora vacía
                 filas_finales.append({"Categoría/Producto": "", "ID Operación": "", "Cliente": "", "DNI/CUIT": "", "Monto": None})
 
             # 3. CREAR DATAFRAME FINAL
@@ -131,6 +122,3 @@ if uploaded_file:
 
     except Exception as e:
         st.error(f"Error al procesar el archivo: {e}")
-
-    except Exception as e:
-        st.error(f"Ocurrió un error inesperado: {e}")

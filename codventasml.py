@@ -73,7 +73,7 @@ if uploaded_file:
                 
                 # Fila 2: Comisiones MP + Envío (Todo sumado)
                 filas_finales.append({
-                    "Categoría/Producto": "Comisiones MP + Envío", 
+                    "Categoría/Producto": "", 
                     "ID Operación": "", 
                     "Cliente": "",
                     "DNI/CUIT": "",
